@@ -19,6 +19,11 @@ jobs:
       with:
         xcode-version: 'latest-stable'
 
+    - name: Checkout local dependencies
+      run: |
+        git clone https://github.com/lorentey/BTree.git ../BTree
+        git clone https://github.com/sindresorhus/Settings.git ../Settings
+
     - name: Build and Archive
       run: |
         xcodebuild -project FlowVision.xcodeproj \
