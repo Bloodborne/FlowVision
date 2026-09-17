@@ -27,9 +27,11 @@ jobs:
     - name: Set up ffmpeg-kit
       run: |
         curl -L -o ffmpeg-kit.zip https://github.com/netdcy/ffmpeg-kit/releases/download/v6.0/ffmpeg-kit-full-gpl-6.0-macos-xcframework.zip
-        unzip -q ffmpeg-kit.zip
+        mkdir -p ffmpeg-kit-temp
+        unzip -q ffmpeg-kit.zip -d ffmpeg-kit-temp
         mkdir -p ../ffmpeg-kit-build/bundle-apple-xcframework-macos
-        cp -R ffmpeg-kit-full-gpl-6.0-macos-xcframework/* ../ffmpeg-kit-build/bundle-apple-xcframework-macos/
+        find ffmpeg-kit-temp -name "*.xcframework" -exec cp -R {} ../ffmpeg-kit-build/bundle-apple-xcframework-macos/ \;
+        rm -rf ffmpeg-kit.zip ffmpeg-kit-temp
 
     - name: Build and Archive
       run: |
