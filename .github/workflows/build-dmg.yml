@@ -24,6 +24,13 @@ jobs:
         git clone https://github.com/lorentey/BTree.git ../BTree
         git clone https://github.com/sindresorhus/Settings.git ../Settings
 
+    - name: Set up ffmpeg-kit
+      run: |
+        curl -L -o ffmpeg-kit.zip https://github.com/netdcy/ffmpeg-kit/releases/download/v6.0/ffmpeg-kit-full-gpl-6.0-macos-xcframework.zip
+        unzip -q ffmpeg-kit.zip
+        mkdir -p ../ffmpeg-kit-build/bundle-apple-xcframework-macos
+        cp -R ffmpeg-kit-full-gpl-6.0-macos-xcframework/* ../ffmpeg-kit-build/bundle-apple-xcframework-macos/
+
     - name: Build and Archive
       run: |
         xcodebuild -project FlowVision.xcodeproj \
