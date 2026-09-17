@@ -795,8 +795,30 @@ func getVideoThumbnailFFmpeg(for url: URL, at time: TimeInterval = 10) -> NSImag
     let uniqueFilename = UUID().uuidString + ".jpg"
     let thumbnailPath = tempDirectory.appendingPathComponent(uniqueFilename).path
     
-    // let ffmpegCommand = "-i '\(url.path)' -ss \(time) -vf \"select=eq(n\\,100),thumbnail,scale=512:-1\" -qscale:v 2 -frames:v 1 \(thumbnailPath)"
-    // let ffmpegCommand = "-i '\(url.path)' -vf \"scale=1280:-1,blackframe=0,metadata=select:key=lavfi.blackframe.pblack:value=50:function=less\" -frames:v 1 \(thumbnailPath)"
+    if !FFmpegKitWrapper.shared.getIfLoaded() {
+        return nil
+    }
+    
+    // 尝试提取内嵌封面 (Try to extract embedded cover first)
+    let extractCoverArgs: [String] = [
+        "-y",
+        "-i", url.path,
+        "-map", "0:v", "-map", "-0:V",
+        "-c", "copy",
+        "-frames:v", "1",
+        thumbnailPath
+    ]
+    
+    if let session = FFmpegKitWrapper.shared.executeFFmpegCommand(extractCoverArgs),
+       let returnCode = FFmpegKitWrapper.shared.getReturnCode(from: session),
+       FFmpegKitWrapper.shared.isSuccess(returnCode) {
+        if let thumbnail = NSImage(contentsOf: URL(fileURLWithPath: thumbnailPath)) {
+            // 删除临时文件
+            // Delete temporary file
+            try? FileManager.default.removeItem(at: URL(fileURLWithPath: thumbnailPath))
+            return thumbnail
+        }
+    }
 
     // 构建 ffmpeg 命令的参数数组
     // Build ffmpeg command argument array
@@ -831,11 +853,7 @@ func getVideoThumbnailFFmpeg(for url: URL, at time: TimeInterval = 10) -> NSImag
 //        // return nil
 //    }
     
-    if !FFmpegKitWrapper.shared.getIfLoaded() {
-        // return getFileTypeIcon(url: url)
-        return nil
-    }
-    
+
     if let session = FFmpegKitWrapper.shared.executeFFmpegCommand(ffmpegArgs) {
         if let returnCode = FFmpegKitWrapper.shared.getReturnCode(from: session) {
             let output = FFmpegKitWrapper.shared.getOutput(from: session)
@@ -942,6 +960,14 @@ func getImageThumb(url: URL, size oriSize: NSSize? = nil, refSize: NSSize? = nil
     // Handle video thumbnails
     if globalVar.HandledVideoExtensions.contains(url.pathExtension.lowercased()) {
         let asset = AVAsset(url: url)
+        
+        // 尝试获取内嵌封面
+        for item in asset.commonMetadata {
+            if item.commonKey == .commonKeyArtwork, let data = item.dataValue, let image = NSImage(data: data) {
+                return image.deepCopy()
+            }
+        }
+        
         let imageGenerator = AVAssetImageGenerator(asset: asset)
         // 保证图像的正确方向
         // Ensure correct image orientation
